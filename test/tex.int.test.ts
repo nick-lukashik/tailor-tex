@@ -142,7 +142,7 @@ describe.skipIf(!hasTex)('XeLaTeX builds (needs xelatex and poppler on PATH)', (
         for (const text of links) expect(row).toContain(text)
     })
 
-    it('renders the header without location and phone', async () => {
+    it('renders the header without location and phone, the title beside the name', async () => {
         const res = await render({
             ...jordanSample,
             location: '',
@@ -151,7 +151,8 @@ describe.skipIf(!hasTex)('XeLaTeX builds (needs xelatex and poppler on PATH)', (
         })
         expect(res.status).toBe(200)
         const lines = (await firstPageText(res.body as Buffer)).split('\n').filter(line => line.trim())
-        expect(lines[0]?.trim()).toBe(jordanSample.name)
+        expect(lines[0]?.trim().startsWith(jordanSample.name)).toBe(true)
+        expect(lines[0]).toContain(jordanSample.headline)
         expect(lines.join('\n')).not.toContain(jordanSample.phoneDisplay)
         expect(lines.join('\n')).not.toContain(jordanSample.location)
     })

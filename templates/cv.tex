@@ -8,7 +8,7 @@
 %   xelatex "\def\ContentFile{content}\def\FontDir{fonts/}\input{cv}"
 % \ContentFile defaults to "content", \FontDir to "fonts/" (fonts/ibm-plex-sans
 % of the repo). tailor-tex does all of this in a temporary folder per build.
-% An empty location or education date drops its middle dot instead of
+% An empty job location drops its middle dot instead of
 % leaving it dangling, and a summary with an empty second paragraph drops
 % the gap before it.
 %
@@ -87,13 +87,12 @@
 \pagestyle{empty}
 
 % ----------------------------------------------------------------------------
-% Header in three rows: the name with location and phone at the right edge,
-% the headline with the core stack at the right edge, then every link on one
-% line. Location and phone sit a few points off the name's baseline, so
-% parsers keep the name as a line of its own. Links use the accent so they
-% read as clickable.
+% Header in three rows: the name with the title at the right edge on its
+% baseline; then location (with time zone and work format) and the phone,
+% with the core stack at the right edge; then every link on one line. Each of
+% location, phone and stack may be empty; with all three empty the row is gone.
+% Links use the accent so they read as clickable.
 %   \cvheader{name}{location}{phone as shown}{phone digits}{headline}{stack}
-% Location and phone may be empty.
 %   \cvlinks{\cvlink{url}{text}\linksep\cvlink{url}{text}...}
 % The links never wrap: a row too wide for the line first gets narrower gaps
 % (7pt down to 4pt), then a smaller size (9.2pt down to 7.6pt). Only past
@@ -108,18 +107,16 @@
 \newcommand{\cvlink}[2]{\href{#1}{\color{Accent}#2}}
 \newcommand{\cvheader}[6]{%
   \hypersetup{pdfauthor={#1}}%
-  \noindent{\namefont\fontsize{29}{33}\selectfont\color{Ink}#1}%
-  % Location and phone are each optional; without both there is no block.
-  \ifboolexpr{test {\ifblank{#2}} and test {\ifblank{#3}}}{}{\hfill
-  % Raised only slightly: the block's top must stay below the top of the name,
-  % or poppler reads location and phone before the name.
-  \raisebox{0.5pt}{\parbox[b]{0.4\textwidth}{\raggedleft\fontsize{9.5}{12.5}\selectfont
-    \ifblank{#2}{}{{\bfseries\color{Ink}#2}\par}%
-    \ifblank{#3}{}{{\color{Ink}\href{tel:#4}{#3}}}}}}\par
-  \vspace{3pt}
-  {\fontsize{12.5}{16}\selectfont\bfseries\color{Accent}#5}\hfill
-  {\fontsize{9.5}{16}\selectfont\color{Muted}#6}\par
-  \vspace{7pt}}
+  \noindent{\namefont\fontsize{29}{33}\selectfont\color{Ink}#1}\hfill
+  {\fontsize{12.5}{16}\selectfont\bfseries\color{Accent}#5}\par
+  \ifboolexpr{test {\ifblank{#2}} and test {\ifblank{#3}} and test {\ifblank{#6}}}{\vspace{4pt}}{%
+    \vspace{2pt}%
+    {\noindent\fontsize{9.5}{13}\selectfont
+      \ifblank{#2}{}{{\color{Ink}#2}}%
+      \ifboolexpr{test {\ifblank{#2}} or test {\ifblank{#3}}}{}{\linksep}%
+      \ifblank{#3}{}{{\color{Ink}\href{tel:#4}{#3}}}%
+      \hfill{\color{Muted}#6}\par}%
+    \vspace{5pt}}}
 % Width of the row at the current gap and size, into \cvlinkswidth.
 \newcommand{\cvlinksmeasure}[1]{%
   \settowidth{\cvlinkswidth}{\fontsize{\cvlinksize}{12}\selectfont#1}}
@@ -180,11 +177,10 @@
     label={\color{Accent}\fontsize{8.5}{8.5}\selectfont\textbullet}]}
   {\end{itemize}}
 
-% Education: degree, then school and dates on one left-aligned line. Dates
-% pushed to the right margin here would be read as a separate column.
+% Education: one line like a job's, degree | school, the dates (if any) at
+% the right edge.
 \newcommand{\cvedu}[3]{%
-  {\fontsize{10.6}{14}\selectfont\bfseries\color{Ink}#1}\par
-  {\bfseries\color{Accent}#2}\ifblank{#3}{}{\hspace{6pt}{\color{Muted}·\hspace{6pt}#3}}\par}
+  {\fontsize{10.6}{14}\selectfont{\bfseries\color{Ink}#1}\hspace{7pt}{\color{Divider}|}\hspace{7pt}{\bfseries\color{Accent}#2}\hfill{\fontsize{8.8}{14}\selectfont\color{Muted}#3}}\par}
 
 % Languages share one line, joined by a middle dot. A wide gap instead would
 % make parsers read the second language as a separate column.
