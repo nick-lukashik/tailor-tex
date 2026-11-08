@@ -1,3 +1,8 @@
+import { execFile } from 'node:child_process'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { promisify } from 'node:util'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { type CvDocument, cvMeasurementSchema } from '../src/cv/cv.schemas.js'
 import { alexExample, jordanSample } from './fixtures/cv.js'
@@ -73,10 +78,10 @@ describe.skipIf(!hasTex)('XeLaTeX builds (needs xelatex and poppler on PATH)', (
         })
     })
 
-    it('renders a PDF with its headers', async () => {
-        const res = await t
+    const render = (document: CvDocument) =>
+        t
             .post('/api/v1/cv/render', {
-                document: jordanSample,
+                document,
             })
             .buffer(true)
             .parse((stream, done) => {
@@ -84,10 +89,50 @@ describe.skipIf(!hasTex)('XeLaTeX builds (needs xelatex and poppler on PATH)', (
                 stream.on('data', (chunk: Buffer) => chunks.push(chunk))
                 stream.on('end', () => done(null, Buffer.concat(chunks)))
             })
+
+    it('renders a PDF with its headers', async () => {
+        const res = await render(jordanSample)
         expect(res.status).toBe(200)
         expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-')
         expect(res.headers['x-pdf-pages']).toBe('2')
         expect(Number(res.headers['x-pdf-fill'])).toBeGreaterThan(0)
+    })
+
+    it('fits a row of links too wide at full size on one line', async () => {
+        const links = [
+            'jordan.sample@example.com',
+            'in.example.com/jordan-sample',
+            'git.example.com/jordan',
+            'chat.example.com/jordan',
+            'jordan.example.com',
+        ]
+        const res = await render({
+            ...jordanSample,
+            links: links.map(text => ({
+                url: `https://${text}`,
+                text,
+            })),
+        })
+        expect(res.status).toBe(200)
+        const dir = await mkdtemp(join(tmpdir(), 'links-'))
+        try {
+            const pdf = join(dir, 'cv.pdf')
+            await writeFile(pdf, res.body as Buffer)
+            const { stdout } = await promisify(execFile)('pdftotext', [
+                '-layout',
+                '-l',
+                '1',
+                pdf,
+                '-',
+            ])
+            const row = stdout.split('\n').find(line => line.includes(links[0] as string))
+            for (const text of links) expect(row).toContain(text)
+        } finally {
+            await rm(dir, {
+                recursive: true,
+                force: true,
+            })
+        }
     })
 
     it('reports an unbreakable word as overfull', async () => {

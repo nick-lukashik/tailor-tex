@@ -94,8 +94,16 @@
 % read as clickable.
 %   \cvheader{name}{location}{phone as shown}{phone digits}{headline}{stack}
 %   \cvlinks{\cvlink{url}{text}\linksep\cvlink{url}{text}...}
+% The links never wrap: a row too wide for the line first gets narrower gaps
+% (7pt down to 4pt), then a smaller size (9.2pt down to 7.6pt). Only past
+% that floor does it wrap, rather than turn unreadable.
 % ----------------------------------------------------------------------------
-\newcommand{\linksep}{\hspace{7pt}{\color{Divider}·}\hspace{7pt}}
+\newlength{\cvlinkgap}
+\setlength{\cvlinkgap}{7pt}
+\newlength{\cvlinksize}
+\newlength{\cvlinkswidth}
+\newif\ifcvlinksshrink
+\newcommand{\linksep}{\hspace{\cvlinkgap}{\color{Divider}·}\hspace{\cvlinkgap}}
 \newcommand{\cvlink}[2]{\href{#1}{\color{Accent}#2}}
 \newcommand{\cvheader}[6]{%
   \hypersetup{pdfauthor={#1}}%
@@ -109,7 +117,32 @@
   {\fontsize{12.5}{16}\selectfont\bfseries\color{Accent}#5}\hfill
   {\fontsize{9.5}{16}\selectfont\color{Muted}#6}\par
   \vspace{7pt}}
-\newcommand{\cvlinks}[1]{{\fontsize{9.2}{12}\selectfont#1\par}\vspace{2pt}}
+% Width of the row at the current gap and size, into \cvlinkswidth.
+\newcommand{\cvlinksmeasure}[1]{%
+  \settowidth{\cvlinkswidth}{\fontsize{\cvlinksize}{12}\selectfont#1}}
+% One step of the fit by recursion, not \loop: font loading at a new size
+% may run a \loop of its own and clobber ours.
+\newcommand{\cvlinksfit}[1]{%
+  \cvlinksshrinkfalse
+  \ifdim\cvlinkswidth>\linewidth
+    \ifdim\cvlinkgap>4pt
+      \addtolength{\cvlinkgap}{-0.5pt}\cvlinksshrinktrue
+    \else\ifdim\cvlinksize>7.6pt
+      \addtolength{\cvlinksize}{-0.2pt}\cvlinksshrinktrue
+    \fi\fi
+  \fi
+  \ifcvlinksshrink
+    \def\cvlinksnext{\cvlinksmeasure{#1}\cvlinksfit{#1}}%
+  \else
+    \let\cvlinksnext\relax
+  \fi
+  \cvlinksnext}
+\newcommand{\cvlinks}[1]{{%
+  \setlength{\cvlinkgap}{7pt}%
+  \setlength{\cvlinksize}{9.2pt}%
+  \cvlinksmeasure{#1}%
+  \cvlinksfit{#1}%
+  \fontsize{\cvlinksize}{12}\selectfont#1\par}\vspace{2pt}}
 
 % ----------------------------------------------------------------------------
 % Sections and blocks
