@@ -1,8 +1,9 @@
+import { tmpdir } from 'node:os'
 import { registerAs } from '@nestjs/config'
 import { env } from './env.js'
 
-/** Service name: logs, metrics, connection names. Rename it with the repo. */
-export const SERVICE_NAME = 'nest-starter'
+/** Service name: logs, metrics. */
+export const SERVICE_NAME = 'tailor-tex'
 
 export const appConfig = registerAs('app', () => ({
     service: SERVICE_NAME,
@@ -16,7 +17,14 @@ export const appConfig = registerAs('app', () => ({
     metricsPort: env().METRICS_PORT,
 }))
 
-export const dbConfig = registerAs('db', () => ({
-    url: env().DATABASE_URL,
-    max: env().DATABASE_POOL_MAX,
+export const authConfig = registerAs('auth', () => ({
+    internalToken: env().INTERNAL_API_TOKEN,
 }))
+
+export const texConfig = registerAs('tex', () => ({
+    concurrency: env().TEX_CONCURRENCY,
+    queueMax: env().TEX_QUEUE_MAX,
+    timeoutMs: env().TEX_TIMEOUT_MS,
+    workDir: env().TEX_WORK_DIR ?? tmpdir(),
+}))
+export type TexConfig = ReturnType<typeof texConfig>

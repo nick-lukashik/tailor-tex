@@ -1,21 +1,15 @@
 import { Module } from '@nestjs/common'
 import type { ConfigType } from '@nestjs/config'
-import { DatabaseModule } from './common/database/database.module.js'
 import { HealthModule } from './common/health/health.module.js'
 import { createLoggerModule } from './common/logging/logger.module.js'
 import { MetricsModule } from './common/metrics/metrics.module.js'
-import { appConfig, dbConfig } from './config/config.js'
+import { appConfig } from './config/config.js'
 import { AppConfigModule } from './config/config.module.js'
-import * as schema from './db/schema.js'
-import { NotesModule } from './notes/notes.module.js'
+import { CvModule } from './cv/cv.module.js'
 
 type App = ConfigType<typeof appConfig>
 
-/**
- * The base every service needs. Redis, RabbitMQ (outbox/inbox) and pg-boss
- * are added only by a service that uses them: copy the module from
- * nest-example and add it here (README, "Add a capability").
- */
+/** No database, queue or user auth: internal endpoints behind a service token. */
 @Module({
     imports: [
         AppConfigModule,
@@ -47,19 +41,7 @@ type App = ConfigType<typeof appConfig>
                 port: app.metricsPort,
             }),
         }),
-        DatabaseModule.forRootAsync({
-            schema,
-            inject: [
-                dbConfig.KEY,
-                appConfig.KEY,
-            ],
-            useFactory: (db: ConfigType<typeof dbConfig>, app: App) => ({
-                url: db.url,
-                max: db.max,
-                applicationName: app.service,
-            }),
-        }),
-        NotesModule,
+        CvModule,
     ],
 })
 export class AppModule {}

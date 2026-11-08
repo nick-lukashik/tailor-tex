@@ -1,0 +1,168 @@
+% ============================================================================
+% CV template: Minimal violet (two pages at most, from Work Finder and Atelier)
+% Layout only. Every name, contact, headline and bullet lives in the content
+% file, which tailor-tex generates from a CvDocument for each build; every
+% text value there is escaped by tailor-tex, never written by a model.
+%
+% Compile with XeLaTeX, twice:
+%   xelatex "\def\ContentFile{content}\def\FontDir{fonts/}\input{cv}"
+% \ContentFile defaults to "content", \FontDir to "fonts/" (fonts/ibm-plex-sans
+% of the repo). tailor-tex does all of this in a temporary folder per build.
+% An empty location or education date drops its middle dot instead of
+% leaving it dangling, and a summary with an empty second paragraph drops
+% the gap before it.
+%
+% Font: IBM Plex Sans (OFL, fonts/ibm-plex-sans/OFL.txt). Type scale (pt):
+% name 29, headline 12.5, job title 10.6, body 9.5 on 13, metadata 8.8,
+% section labels 9.2 tracked. Accent violet #6D28D9.
+%
+% ATS rules this layout keeps (verified with poppler and a drawing-order
+% parser): single text column, real text only, no tables, icons, header or
+% footer; no ligatures and no hyphenation; a font that maps every glyph to
+% plain ASCII (hyphens and parentheses included); tracking at or below
+% 0.06 em; skills one category per line; inline items joined by middle dots,
+% never by wide gaps; nothing right-aligned alone where a parser would read
+% it as a separate column.
+% ============================================================================
+\documentclass[a4paper,10pt]{article}
+
+\providecommand{\ContentFile}{content}
+\providecommand{\FontDir}{fonts/}
+
+% ----------------------------------------------------------------------------
+% Page and packages
+% ----------------------------------------------------------------------------
+\usepackage[a4paper,left=15mm,right=15mm,top=13mm,bottom=14mm]{geometry}
+\usepackage{fontspec}
+\usepackage[english]{babel}
+\usepackage[protrusion=true]{microtype}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\usepackage{xcolor}
+\usepackage[hidelinks,unicode]{hyperref}
+
+% ----------------------------------------------------------------------------
+% Fonts: plain letters only, so "fi", "fl" and "ff" stay searchable. IBM Plex
+% Sans, bold text in SemiBold; it keeps I, l and 1 distinct, so OCR-based
+% checkers read it well.
+% ----------------------------------------------------------------------------
+\def\CvRegular{IBMPlexSans-Regular.ttf}
+\def\CvBold{IBMPlexSans-SemiBold.ttf}
+\def\CvHeavy{IBMPlexSans-Bold.ttf}
+\def\CvNameTrack{-0.5}
+\defaultfontfeatures{Ligatures={TeX,NoCommon},Kerning=On}
+\setmainfont{\CvRegular}[Path=\FontDir,BoldFont=\CvBold]
+\newfontfamily\namefont{\CvHeavy}[Path=\FontDir,LetterSpace=\CvNameTrack]
+% Tracking stays below 0.1 em, so parsers still read every label as one word.
+\newfontfamily\labelfont{\CvBold}[Path=\FontDir,LetterSpace=6]
+
+% No hyphenation: every keyword stays whole for ATS parsers.
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\setlength{\emergencystretch}{3em}
+
+% ----------------------------------------------------------------------------
+% Colors: one violet accent, a deep violet-ink for highlights, neutral text
+% ----------------------------------------------------------------------------
+\providecommand{\AccentHex}{6D28D9}
+\definecolor{Accent}{HTML}{\AccentHex}
+\colorlet{Highlight}{Accent!32!black}
+\colorlet{Rule}{Accent!18!white}
+\colorlet{Divider}{Accent!45!white}
+\definecolor{Ink}{HTML}{14171C}
+\definecolor{Body}{HTML}{2B3038}
+\definecolor{Muted}{HTML}{646B76}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\raggedbottom
+% Never split a bullet so that one of its lines sits alone on a page.
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
+
+% No header or footer: running text there lands in the middle of a job's
+% bullets when ATS parsers extract the page.
+\pagestyle{empty}
+
+% ----------------------------------------------------------------------------
+% Header in three rows: the name with location and phone at the right edge,
+% the headline with the core stack at the right edge, then every link on one
+% line. Location and phone sit a few points off the name's baseline, so
+% parsers keep the name as a line of its own. Links use the accent so they
+% read as clickable.
+%   \cvheader{name}{location}{phone as shown}{phone digits}{headline}{stack}
+%   \cvlinks{\cvlink{url}{text}\linksep\cvlink{url}{text}...}
+% ----------------------------------------------------------------------------
+\newcommand{\linksep}{\hspace{7pt}{\color{Divider}·}\hspace{7pt}}
+\newcommand{\cvlink}[2]{\href{#1}{\color{Accent}#2}}
+\newcommand{\cvheader}[6]{%
+  \hypersetup{pdfauthor={#1}}%
+  \noindent{\namefont\fontsize{29}{33}\selectfont\color{Ink}#1}\hfill
+  % Raised only slightly: the block's top must stay below the top of the name,
+  % or poppler reads location and phone before the name.
+  \raisebox{0.5pt}{\parbox[b]{0.4\textwidth}{\raggedleft\fontsize{9.5}{12.5}\selectfont
+    {\bfseries\color{Ink}#2}\par
+    {\color{Ink}\href{tel:#4}{#3}}}}\par
+  \vspace{3pt}
+  {\fontsize{12.5}{16}\selectfont\bfseries\color{Accent}#5}\hfill
+  {\fontsize{9.5}{16}\selectfont\color{Muted}#6}\par
+  \vspace{7pt}}
+\newcommand{\cvlinks}[1]{{\fontsize{9.2}{12}\selectfont#1\par}\vspace{2pt}}
+
+% ----------------------------------------------------------------------------
+% Sections and blocks
+% ----------------------------------------------------------------------------
+% Section: tracked uppercase label followed by a hairline to the margin.
+\newcommand{\sectionlabel}[1]{\MakeUppercase{#1}\hspace{10pt}{\color{Rule}\leaders\vrule height 3.5pt depth -2.85pt\hfill}\kern0pt}
+\titleformat{\section}{\labelfont\fontsize{9.2}{12}\selectfont\color{Accent}}{}{0pt}{\sectionlabel}
+\titlespacing*{\section}{0pt}{10pt}{5.5pt}
+\newcommand{\cvsection}[1]{\Needspace{4\baselineskip}\section*{#1}}
+
+\newcommand{\hl}[1]{{\bfseries\color{Highlight}#1}}
+
+\newcommand{\cvsummary}[2]{#1\par\ifblank{#2}{}{\vspace{4.5pt}#2\par}}
+
+% Skills: bold label and the list on the same line, one line per category.
+\newenvironment{cvskills}{\par}{\par}
+\newcommand{\cvskill}[2]{%
+  \par\hangindent=10pt\hangafter=1\noindent
+  {\bfseries\color{Ink}#1:}\hspace{4pt}#2\par\vspace{2.6pt}}
+
+% Job: title | company on the left, dates and location on the right,
+% a one-line company description underneath; never stranded at a page end.
+%   \cvjob{title}{company}{dates}{location}{company description}
+\newcommand{\cvjob}[5]{%
+  \par\addvspace{8pt}\Needspace{4\baselineskip}%
+  {\fontsize{10.6}{14}\selectfont{\bfseries\color{Ink}#1}\hspace{7pt}{\color{Divider}|}\hspace{7pt}{\bfseries\color{Accent}#2}\hfill{\fontsize{8.8}{14}\selectfont\color{Muted}#3\ifblank{#4}{}{\hspace{5pt}·\hspace{5pt}#4}}}\par
+  {\fontsize{8.8}{12.4}\selectfont\color{Muted}#5}\par\nopagebreak
+  \vspace{3.5pt}}
+
+\newenvironment{cvbullets}{%
+  \begin{itemize}[leftmargin=12.5pt,labelsep=6.5pt,itemsep=2pt,topsep=0pt,parsep=0pt,partopsep=0pt,
+    label={\color{Accent}\fontsize{8.5}{8.5}\selectfont\textbullet}]}
+  {\end{itemize}}
+
+% Education: degree, then school and dates on one left-aligned line. Dates
+% pushed to the right margin here would be read as a separate column.
+\newcommand{\cvedu}[3]{%
+  {\fontsize{10.6}{14}\selectfont\bfseries\color{Ink}#1}\par
+  {\bfseries\color{Accent}#2}\ifblank{#3}{}{\hspace{6pt}{\color{Muted}·\hspace{6pt}#3}}\par}
+
+% Languages share one line, joined by a middle dot. A wide gap instead would
+% make parsers read the second language as a separate column.
+\newcommand{\cvlangsep}{}
+\newcommand{\cvlang}[2]{\cvlangsep{\bfseries\color{Ink}#1:}\hspace{4pt}#2%
+  \gdef\cvlangsep{\hspace{6pt}{\color{Muted}·}\hspace{6pt}}}
+
+% ============================================================================
+\begin{document}
+\fontsize{9.5}{13}\selectfont
+\color{Body}
+\raggedright
+\frenchspacing
+
+\input{\ContentFile}
+
+\end{document}

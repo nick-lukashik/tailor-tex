@@ -17,7 +17,7 @@ const CHECK_TIMEOUT_MS = 2_000
 /**
  * GET /health/live: the process answers; never checks dependencies, so an
  * outage of one does not restart every pod.
- * GET /health/ready: every required dependency (Postgres) answers within 2 s,
+ * GET /health/ready: every required dependency (here the TeX toolchain) answers within 2 s,
  * else 503 (also 503 while shutting down, so traffic drains first). A
  * degradable one (Redis, RabbitMQ) that fails is reported as `degraded` in
  * the body and the status stays 200: the service still does its core job.

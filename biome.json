@@ -1,7 +1,7 @@
 {
     "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
     "files": {
-        "includes": ["**", "!dist", "!coverage", "!drizzle/meta"]
+        "includes": ["**", "!dist", "!coverage"]
     },
     "formatter": {
         "enabled": true,
@@ -31,7 +31,6 @@
     "linter": {
         "enabled": true,
         "domains": {
-            "drizzle": "recommended",
             "test": "recommended"
         },
         "rules": {
@@ -59,20 +58,6 @@
             },
             "complexity": {
                 "noStaticOnlyClass": "off"
-            },
-            "suspicious": {
-                "noDrizzleUpdateWithoutWhere": {
-                    "level": "error",
-                    "options": {
-                        "drizzleObjectName": ["db", "tx"]
-                    }
-                },
-                "noDrizzleDeleteWithoutWhere": {
-                    "level": "error",
-                    "options": {
-                        "drizzleObjectName": ["db", "tx"]
-                    }
-                }
             }
         }
     },

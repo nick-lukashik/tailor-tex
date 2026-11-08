@@ -1,4 +1,3 @@
-import { DrizzleQueryError } from 'drizzle-orm/errors'
 import { pino, stdSerializers } from 'pino'
 import { describe, expect, it } from 'vitest'
 import { safeErrorMessage, serializeError } from './safe-error.js'
@@ -10,6 +9,19 @@ const postgresError = (message: string, fields: Record<string, unknown> = {}) =>
         code: '23505',
         ...fields,
     })
+
+/** The shape of Drizzle's DrizzleQueryError (this service has no Drizzle; the serializer stays shared). */
+class DrizzleQueryError extends Error {
+    constructor(
+        readonly query: string,
+        readonly params: unknown[],
+        cause: Error,
+    ) {
+        super(`Failed query: ${query}\nparams: ${params}`, {
+            cause,
+        })
+    }
+}
 
 const failedInsert = () =>
     new DrizzleQueryError(

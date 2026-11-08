@@ -1,6 +1,5 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common'
 import type { Request, Response } from 'express'
-import { type DatabaseFailure, databaseFailure } from '../database/database.js'
 import { AppError, type ErrorBody, type ErrorCode, errorStatus } from './app-error.js'
 
 type Rendered = Omit<ErrorBody, 'requestId'> & {
@@ -20,17 +19,10 @@ function parserError(exception: unknown) {
 }
 
 const codeOf = (status: number): ErrorCode => {
+    if (status === HttpStatus.UNAUTHORIZED) return 'UNAUTHORIZED'
     if (status === HttpStatus.NOT_FOUND) return 'NOT_FOUND'
     if (status === HttpStatus.PAYLOAD_TOO_LARGE) return 'PAYLOAD_TOO_LARGE'
     return status >= 500 ? 'INTERNAL' : 'VALIDATION_FAILED'
-}
-
-/** Safe for clients: what happened, never the SQL. */
-const DATABASE_MESSAGES: Record<DatabaseFailure, string> = {
-    lock_timeout: 'Database lock wait timed out, retry later',
-    statement_timeout: 'Database query timed out, retry later',
-    pool_timeout: 'Database is busy, retry later',
-    unavailable: 'Database unavailable, retry later',
 }
 
 export function renderError(exception: unknown): Rendered {
@@ -70,14 +62,6 @@ export function renderError(exception: unknown): Rendered {
             message,
         }
     }
-    const failure = databaseFailure(exception)
-    if (failure) {
-        return {
-            status: errorStatus.UNAVAILABLE,
-            code: 'UNAVAILABLE',
-            message: DATABASE_MESSAGES[failure],
-        }
-    }
     return {
         status: errorStatus.INTERNAL,
         code: 'INTERNAL',
@@ -85,16 +69,10 @@ export function renderError(exception: unknown): Rendered {
     }
 }
 
-/**
- * Renders every error as the contract body; unknown errors become INTERNAL and
- * are logged. A database over its time budget or gone is a 503 UNAVAILABLE,
- * logged by reason only and reported to `onDatabaseFailure` (a metric).
- */
+/** Renders every error as the contract body; unknown errors become INTERNAL and are logged. */
 @Catch()
 export class ErrorFilter implements ExceptionFilter {
     private readonly logger = new Logger('ErrorFilter')
-
-    constructor(private readonly onDatabaseFailure?: (failure: DatabaseFailure) => void) {}
 
     catch(exception: unknown, host: ArgumentsHost) {
         const http = host.switchToHttp()
@@ -112,18 +90,7 @@ export class ErrorFilter implements ExceptionFilter {
         }
 
         const { status, ...rest } = renderError(exception)
-        const failure = status === errorStatus.UNAVAILABLE ? databaseFailure(exception) : undefined
-        if (failure) {
-            this.onDatabaseFailure?.(failure)
-            this.logger.warn(
-                {
-                    reason: failure,
-                    method: request.method,
-                    url: request.originalUrl,
-                },
-                'Database unavailable for a request',
-            )
-        } else if (status >= 500) {
+        if (status >= 500 && !(exception instanceof AppError)) {
             this.logger.error(
                 {
                     err: exception,

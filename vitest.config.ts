@@ -27,13 +27,10 @@ export default defineConfig({
                     include: [
                         'test/**/*.test.ts',
                     ],
-                    // Real Postgres: started once, shared by every file.
-                    globalSetup: [
-                        'test/global-setup.ts',
-                    ],
+                    // One app per file; the TeX tests (skipped without xelatex) take seconds each.
                     fileParallelism: false,
-                    testTimeout: 30_000,
-                    hookTimeout: 180_000,
+                    testTimeout: 60_000,
+                    hookTimeout: 60_000,
                 },
             },
         ],
