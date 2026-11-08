@@ -144,6 +144,18 @@ describe('cvBuildRequestSchema', () => {
         })
     })
 
+    it('accepts a CV without location and phone', () => {
+        const result = cvBuildRequestSchema.safeParse({
+            document: {
+                ...alexExample,
+                location: '',
+                phoneDisplay: '',
+                phoneDigits: '',
+            },
+        })
+        expect(result.success).toBe(true)
+    })
+
     it('refuses unknown fields, templates and a phone that is not digits', () => {
         const result = cvBuildRequestSchema.safeParse({
             document: {

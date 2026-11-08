@@ -38,7 +38,7 @@ function header(doc: CvDocument) {
         '\\cvheader',
         `  {${texEscape(doc.name)}}`,
         `  {${texEscape(doc.location)}}`,
-        // phoneDigits is `+?\d{6,20}` by the schema: nothing to escape.
+        // phoneDigits is empty or `+?\d{6,20}` by the schema: nothing to escape.
         `  {${texEscape(doc.phoneDisplay)}}{${doc.phoneDigits}}`,
         `  {${texEscape(doc.headline)}}`,
         `  {${texEscape(doc.stack)}}`,
