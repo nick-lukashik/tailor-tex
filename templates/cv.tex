@@ -93,6 +93,7 @@
 % parsers keep the name as a line of its own. Links use the accent so they
 % read as clickable.
 %   \cvheader{name}{location}{phone as shown}{phone digits}{headline}{stack}
+% Location and phone may be empty.
 %   \cvlinks{\cvlink{url}{text}\linksep\cvlink{url}{text}...}
 % The links never wrap: a row too wide for the line first gets narrower gaps
 % (7pt down to 4pt), then a smaller size (9.2pt down to 7.6pt). Only past
@@ -107,12 +108,14 @@
 \newcommand{\cvlink}[2]{\href{#1}{\color{Accent}#2}}
 \newcommand{\cvheader}[6]{%
   \hypersetup{pdfauthor={#1}}%
-  \noindent{\namefont\fontsize{29}{33}\selectfont\color{Ink}#1}\hfill
+  \noindent{\namefont\fontsize{29}{33}\selectfont\color{Ink}#1}%
+  % Location and phone are each optional; without both there is no block.
+  \ifboolexpr{test {\ifblank{#2}} and test {\ifblank{#3}}}{}{\hfill
   % Raised only slightly: the block's top must stay below the top of the name,
   % or poppler reads location and phone before the name.
   \raisebox{0.5pt}{\parbox[b]{0.4\textwidth}{\raggedleft\fontsize{9.5}{12.5}\selectfont
-    {\bfseries\color{Ink}#2}\par
-    {\color{Ink}\href{tel:#4}{#3}}}}\par
+    \ifblank{#2}{}{{\bfseries\color{Ink}#2}\par}%
+    \ifblank{#3}{}{{\color{Ink}\href{tel:#4}{#3}}}}}}\par
   \vspace{3pt}
   {\fontsize{12.5}{16}\selectfont\bfseries\color{Accent}#5}\hfill
   {\fontsize{9.5}{16}\selectfont\color{Muted}#6}\par

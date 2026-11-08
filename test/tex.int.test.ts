@@ -90,6 +90,28 @@ describe.skipIf(!hasTex)('XeLaTeX builds (needs xelatex and poppler on PATH)', (
                 stream.on('end', () => done(null, Buffer.concat(chunks)))
             })
 
+    /** The first page as poppler extracts it, layout kept. */
+    const firstPageText = async (pdf: Buffer) => {
+        const dir = await mkdtemp(join(tmpdir(), 'cv-'))
+        try {
+            const file = join(dir, 'cv.pdf')
+            await writeFile(file, pdf)
+            const { stdout } = await promisify(execFile)('pdftotext', [
+                '-layout',
+                '-l',
+                '1',
+                file,
+                '-',
+            ])
+            return stdout
+        } finally {
+            await rm(dir, {
+                recursive: true,
+                force: true,
+            })
+        }
+    }
+
     it('renders a PDF with its headers', async () => {
         const res = await render(jordanSample)
         expect(res.status).toBe(200)
@@ -114,25 +136,24 @@ describe.skipIf(!hasTex)('XeLaTeX builds (needs xelatex and poppler on PATH)', (
             })),
         })
         expect(res.status).toBe(200)
-        const dir = await mkdtemp(join(tmpdir(), 'links-'))
-        try {
-            const pdf = join(dir, 'cv.pdf')
-            await writeFile(pdf, res.body as Buffer)
-            const { stdout } = await promisify(execFile)('pdftotext', [
-                '-layout',
-                '-l',
-                '1',
-                pdf,
-                '-',
-            ])
-            const row = stdout.split('\n').find(line => line.includes(links[0] as string))
-            for (const text of links) expect(row).toContain(text)
-        } finally {
-            await rm(dir, {
-                recursive: true,
-                force: true,
-            })
-        }
+        const row = (await firstPageText(res.body as Buffer))
+            .split('\n')
+            .find(line => line.includes(links[0] as string))
+        for (const text of links) expect(row).toContain(text)
+    })
+
+    it('renders the header without location and phone', async () => {
+        const res = await render({
+            ...jordanSample,
+            location: '',
+            phoneDisplay: '',
+            phoneDigits: '',
+        })
+        expect(res.status).toBe(200)
+        const lines = (await firstPageText(res.body as Buffer)).split('\n').filter(line => line.trim())
+        expect(lines[0]?.trim()).toBe(jordanSample.name)
+        expect(lines.join('\n')).not.toContain(jordanSample.phoneDisplay)
+        expect(lines.join('\n')).not.toContain(jordanSample.location)
     })
 
     it('reports an unbreakable word as overfull', async () => {
