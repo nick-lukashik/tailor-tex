@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { appConfig, dbConfig } from './config.js'
+import { appConfig, authConfig, texConfig } from './config.js'
 import { envSchema } from './env.js'
 
 /**
  * Global, validated configuration: the Zod schema runs at startup and the
  * process stops on any invalid variable. Inject a group with
- * `@Inject(dbConfig.KEY) config: ConfigType<typeof dbConfig>`.
+ * `@Inject(texConfig.KEY) config: ConfigType<typeof texConfig>`.
  */
 @Module({
     imports: [
@@ -18,7 +18,8 @@ import { envSchema } from './env.js'
             validationSchema: envSchema,
             load: [
                 appConfig,
-                dbConfig,
+                authConfig,
+                texConfig,
             ],
         }),
     ],

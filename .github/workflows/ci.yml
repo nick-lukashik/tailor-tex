@@ -1,7 +1,9 @@
 name: ci
 
 # The org reusable workflows (nick-lukashik/.github, docs/ci.md): pnpm verify
-# with a Postgres service container and the image, then the gitops deploy PR.
+# and the image, then the gitops deploy PR. No service containers: tailor-tex
+# has no database. The runner has no xelatex, so the TeX tests skip there; the
+# image build runs xelatex -version and pdftotext -v.
 # Referenced by the moving major tag @v1, never @master (service contract);
 # breaking changes go to @v2.
 
@@ -21,9 +23,6 @@ jobs:
             packages: write
         with:
             kind: api
-            # Only what the service uses, exported as TEST_DATABASE_URL (and
-            # TEST_REDIS_URL, TEST_RABBITMQ_URL once added): test/global-setup.ts.
-            services: postgres
             # The template itself only checks; a repo created from it publishes its image.
             publish: ${{ !github.event.repository.is_template }}
 

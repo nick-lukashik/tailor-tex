@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1
-#   docker build --build-arg APP_VERSION=$(git rev-parse HEAD) -t nest-starter .
-#   docker run --rm -p 4000:3000 -p 9464:9464 --env-file .env -e PORT=3000 nest-starter
+#   docker build --build-arg APP_VERSION=$(git rev-parse HEAD) -t tailor-tex .
+#   docker run --rm --read-only --tmpfs /tmp --user 10001:10001 -p 4000:3000 \
+#     -e INTERNAL_API_TOKEN=... tailor-tex
 # APP_VERSION is the only build arg: one image runs on stage and prod, the rest
-# is runtime env. Migrations run from the same image before a rollout:
-# node dist/db/migrate.js (Argo CD Sync-hook Job, wave 0, before the Deployment).
+# is runtime env. The gitops api component runs `node dist/db/migrate.js`
+# from the same image before a rollout; here it only logs "no migrations".
 
 # base: the Node image every stage starts from. Renovate updates the tag.
 FROM node:26.13.0-trixie-slim AS base
@@ -30,19 +31,44 @@ FROM deps AS prod-deps
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --store-dir /pnpm/store
 
+# tex: XeLaTeX and poppler, apart from the app so code changes reuse the layer.
+# texlive-xetex brings every package templates/cv.tex loads (geometry, fontspec,
+# babel-english, microtype, enumitem, titlesec, needspace, etoolbox, xcolor,
+# hyperref; the last few through texlive-latex-extra). texlive-fonts-recommended
+# (15 MB) only for pzdr.tfm (ZapfDingbats), which hyperref's XeTeX driver loads
+# for every link. Debian, as the template, its thresholds and the bbox
+# measurements were validated on Debian's TeX Live.
+FROM base AS tex
+RUN apt-get update -qq \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+       texlive-xetex texlive-fonts-recommended poppler-utils fontconfig \
+    && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/*
+COPY fonts/ibm-plex-sans /usr/local/share/fonts/ibm-plex-sans
+# Fail the build, not the first render, when the toolchain is incomplete.
+RUN fc-cache -f \
+    && xelatex -version >/dev/null \
+    && kpsewhich pzdr.tfm >/dev/null \
+    && pdftotext -v 2>/dev/null \
+    && command -v pdfinfo pdffonts >/dev/null
+
 # runtime: files stay owned by root, so the app cannot change itself. The
-# numeric non-root user (Kubernetes can verify runAsNonRoot) writes nothing:
-# it runs with a read-only root filesystem, only /tmp writable (emptyDir).
-FROM base AS runtime
+# numeric non-root user (Kubernetes can verify runAsNonRoot) writes only to
+# /tmp (emptyDir): TeX's caches and config and one folder per build there.
+FROM tex AS runtime
 ARG APP_VERSION=dev
-LABEL org.opencontainers.image.title="nest-starter" \
+LABEL org.opencontainers.image.title="tailor-tex" \
       org.opencontainers.image.version="${APP_VERSION}"
 ENV NODE_ENV=production \
     APP_VERSION=${APP_VERSION} \
     PORT=3000 \
-    METRICS_PORT=9464
+    METRICS_PORT=9464 \
+    HOME=/tmp \
+    TEXMFVAR=/tmp/texmf-var \
+    TEXMFCONFIG=/tmp/texmf-config \
+    XDG_CACHE_HOME=/tmp/.cache
 COPY package.json ./
-COPY drizzle ./drizzle
+COPY templates ./templates
+COPY fonts ./fonts
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 USER 10001:10001

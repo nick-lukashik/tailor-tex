@@ -4,7 +4,7 @@ import type { ConfigType } from '@nestjs/config'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { ErrorFilter } from './common/http/error.filter.js'
 import { requestContext } from './common/http/request-id.js'
-import { REQUEST_TIMEOUT_MS, RequestTimeoutInterceptor } from './common/http/request-timeout.js'
+import { RequestTimeoutInterceptor } from './common/http/request-timeout.js'
 import { validationException } from './common/http/validation.js'
 import { HttpMetrics } from './common/metrics/http-metrics.js'
 import { Metrics } from './common/metrics/metrics.js'
@@ -15,9 +15,16 @@ import { appConfig } from './config/config.js'
 export const BODY_LIMIT = '1mb'
 
 /**
+ * Exception to the contract's 10 s request budget: one XeLaTeX build (two
+ * runs and poppler) may take longer on a busy node. The build itself stops at
+ * TEX_TIMEOUT_MS (45 s), so this budget is the last resort.
+ */
+export const TEX_REQUEST_TIMEOUT_MS = 60_000
+
+/**
  * HTTP setup shared by main.ts and the integration tests: security headers,
  * request id, metrics, body limits, Zod validation, contract errors, the
- * request time budget, `/api/v1` routes, OpenAPI, graceful shutdown. CORS
+ * request time budget (60 s here), `/api/v1` routes, OpenAPI, graceful shutdown. CORS
  * stays off: browsers reach the API only through the web app's server.
  */
 export function configureApp(app: NestExpressApplication) {
@@ -48,25 +55,12 @@ export function configureApp(app: NestExpressApplication) {
             exceptionFactory: validationException,
         }),
     )
-    const databaseFailures = metrics.counter({
-        name: 'http_server_database_failures_total',
-        help: 'Requests answered 503 because Postgres was over a time budget or unavailable, by reason.',
-        labelNames: [
-            'reason',
-        ],
-    })
-    app.useGlobalFilters(
-        new ErrorFilter(reason =>
-            databaseFailures.inc({
-                reason,
-            }),
-        ),
-    )
+    app.useGlobalFilters(new ErrorFilter())
     const timeouts = metrics.counter({
         name: 'http_server_request_timeouts_total',
         help: 'Requests answered 504 because they exceeded the whole-request budget.',
     })
-    app.useGlobalInterceptors(new RequestTimeoutInterceptor(REQUEST_TIMEOUT_MS, () => timeouts.inc()))
+    app.useGlobalInterceptors(new RequestTimeoutInterceptor(TEX_REQUEST_TIMEOUT_MS, () => timeouts.inc()))
     app.setGlobalPrefix('api', {
         exclude: [
             'health/live',

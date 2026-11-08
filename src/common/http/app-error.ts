@@ -3,13 +3,16 @@ import { z } from 'zod'
 /** Stable machine-readable error codes of the HTTP contract and their statuses. */
 export const errorStatus = {
     VALIDATION_FAILED: 400,
+    /** No valid service token (INTERNAL_API_TOKEN). */
+    UNAUTHORIZED: 401,
     NOT_FOUND: 404,
     PAYLOAD_TOO_LARGE: 413,
+    /** Valid input that cannot be built: a TeX error, or more pages than allowed. */
+    UNPROCESSABLE: 422,
+    /** Every TeX build slot is busy; retry later. */
     RATE_LIMITED: 429,
     INTERNAL: 500,
-    /** A dependency is down or over its time budget (lock, statement, pool wait); safe to retry later. */
-    UNAVAILABLE: 503,
-    /** The whole request exceeded its budget; a write may still have been applied. */
+    /** The TeX build or the whole request exceeded its budget. */
     TIMEOUT: 504,
 } as const
 export type ErrorCode = keyof typeof errorStatus

@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, HttpException, NotFoundException, UnauthorizedException } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'
 import { AppError, notFound } from './app-error.js'
 import { renderError } from './error.filter.js'
@@ -22,10 +22,10 @@ describe('renderError', () => {
                 },
             ],
         })
-        expect(renderError(notFound('Note'))).toEqual({
+        expect(renderError(notFound('Template'))).toEqual({
             status: 404,
             code: 'NOT_FOUND',
-            message: 'Note not found',
+            message: 'Template not found',
         })
     })
 
@@ -62,35 +62,32 @@ describe('renderError', () => {
         })
     })
 
-    it('answers 503 UNAVAILABLE when Postgres is over a budget or gone, without the SQL', () => {
-        const wrapped = (code: string, message: string) =>
-            Object.assign(new Error('Failed query: update notes set title = $1\nparams: secret'), {
-                cause: Object.assign(new Error(message), {
-                    code,
-                }),
-            })
-        expect(renderError(wrapped('55P03', 'canceling statement due to lock timeout'))).toEqual({
-            status: 503,
-            code: 'UNAVAILABLE',
-            message: 'Database lock wait timed out, retry later',
+    it('maps a missing service token to UNAUTHORIZED', () => {
+        expect(renderError(new UnauthorizedException('Service token required'))).toEqual({
+            status: 401,
+            code: 'UNAUTHORIZED',
+            message: 'Service token required',
         })
-        expect(renderError(wrapped('57014', 'canceling statement due to statement timeout'))).toMatchObject({
-            status: 503,
-            message: 'Database query timed out, retry later',
-        })
-        expect(renderError(new Error('timeout exceeded when trying to connect'))).toMatchObject({
-            status: 503,
-            message: 'Database is busy, retry later',
-        })
+    })
+
+    it('keeps 422 UNPROCESSABLE with its details', () => {
         expect(
             renderError(
-                Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:5432'), {
-                    code: 'ECONNREFUSED',
-                }),
+                new AppError('UNPROCESSABLE', 'xelatex failed (exit 1)', [
+                    {
+                        path: 'log',
+                        message: '! Undefined control sequence.',
+                    },
+                ]),
             ),
         ).toMatchObject({
-            status: 503,
-            message: 'Database unavailable, retry later',
+            status: 422,
+            code: 'UNPROCESSABLE',
+            details: [
+                {
+                    path: 'log',
+                },
+            ],
         })
     })
 
